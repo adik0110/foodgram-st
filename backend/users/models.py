@@ -39,26 +39,9 @@ class User(AbstractUser):
         return self.email
 
 
-# users/models.py
-from django.conf import settings
-from django.db import models
-
 class Follow(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        related_name='follower',
-        on_delete=models.CASCADE
-    )
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        related_name='following',
-        on_delete=models.CASCADE
-    )
+    user = models.ForeignKey(User, related_name='follower', on_delete=models.CASCADE)    # кто подписывается
+    following = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)  # на кого подписываются
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'author'], name='unique_follow')
-        ]
-
-    def __str__(self):
-        return f"{self.user} → {self.author}"
+        unique_together = ('user', 'following')
