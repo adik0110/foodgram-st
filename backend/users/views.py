@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, generics
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
-from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer, AvatarSerializer
+from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer, AvatarSerializer, \
+    SetPasswordSerializer
 
 User = get_user_model()
 
@@ -56,4 +57,19 @@ class UserAvatarUpdateDeleteView(APIView):
         user = request.user
         if user.avatar:
             user.avatar.delete(save=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SetPasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SetPasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)

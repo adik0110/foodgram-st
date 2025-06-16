@@ -1,6 +1,6 @@
 # users/serializers.py
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.password_validation import validate_password
 from drf_extra_fields.fields import Base64ImageField
 import re
@@ -98,3 +98,18 @@ class AvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar',)
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Неверный текущий пароль.")
+        return value
+
+    def validate_new_password(self, value):
+        password_validation.validate_password(value)
+        return value
