@@ -22,6 +22,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
     pagination_class = LimitPageNumberPagination  # опционально
 
+
+    def get_queryset(self):
+        queryset = Recipe.objects.all()
+        user = self.request.user
+
+        # Фильтрация по корзине
+        is_in_cart = self.request.query_params.get('is_in_shopping_cart')
+        if is_in_cart in ['1', 'true', 'True'] and user.is_authenticated:
+            queryset = queryset.filter(shopping_cart=user)
+
+        # Фильтрация по избранному
+        is_favorited = self.request.query_params.get('is_favorited')
+        if is_favorited in ['1', 'true', 'True'] and user.is_authenticated:
+            queryset = queryset.filter(favorites__user=user)
+
+        return queryset
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return RecipeCreateSerializer
