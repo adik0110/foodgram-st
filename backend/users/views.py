@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
-from .serializers import UserCreateSerializer, UserListSerializer
+from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer
 
 User = get_user_model()
 
@@ -26,3 +26,17 @@ class UserListCreateView(APIView):
             UserListSerializer(user, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
+
+
+class UserRetrieveView(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserDetailSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'id'
+
+class UserMeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserDetailSerializer(request.user, context={'request': request})
+        return Response(serializer.data)

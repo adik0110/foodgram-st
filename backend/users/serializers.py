@@ -64,3 +64,27 @@ class UserListSerializer(serializers.ModelSerializer):
         if request is None or request.user.is_anonymous:
             return False
         return obj.following.filter(user=request.user).exists()
+
+
+# users/serializers.py
+class UserDetailSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'is_subscribed',
+            'avatar',
+        )
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return obj.following.filter(user=request.user).exists()
