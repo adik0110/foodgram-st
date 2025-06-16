@@ -46,6 +46,12 @@ class UserMeView(APIView):
 
 class UserAvatarUpdateDeleteView(APIView):
     def put(self, request):
+        if 'avatar' not in request.data:
+            return Response(
+                {'avatar': ['Это поле обязательно.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = AvatarSerializer(
             request.user, data=request.data, partial=True, context={'request': request}
         )
