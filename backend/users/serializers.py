@@ -2,8 +2,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+import re
 
 User = get_user_model()
+
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -15,7 +17,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id',  # 👈 включаем id
+            'id',
             'email',
             'username',
             'first_name',
@@ -24,17 +26,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             'email': {'required': True},
-            'username': {'required': True},
+            'username': {'required': True, 'max_length': 150},
             'first_name': {'required': True},
             'last_name': {'required': True},
         }
 
+    def validate_username(self, value):
+        if not re.match(r'^[\w.@+-]+$', value):
+            raise serializers.ValidationError(
+                "Имя пользователя может содержать только буквы, цифры и символы @ . + - _"
+            )
+        return value
+
     def create(self, validated_data):
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            username=validated_data['username'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            password=validated_data['password'],
-        )
-        return user
+        return User.objects.create_user(**validated_data)
