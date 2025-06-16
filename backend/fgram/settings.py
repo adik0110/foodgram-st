@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'recipes.apps.RecipesConfig',
     'ingredients.apps.IngredientsConfig',
+    'users.apps.UsersConfig',
     'rest_framework',
     'djoser'
 ]
@@ -159,3 +160,6 @@ SIMPLE_JWT = {
    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
    'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# settings.py
+AUTH_USER_MODEL = 'users.User'  # если есть кастомная модель
