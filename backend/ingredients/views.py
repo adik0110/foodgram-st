@@ -17,3 +17,4 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = IngredientSerializer
     filter_backends = [IngredientNameFilter]  # Используем наш кастомный фильтр
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
