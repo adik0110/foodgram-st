@@ -44,10 +44,36 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, value):
         if not value:
             raise serializers.ValidationError("Необходимо указать хотя бы один ингредиент.")
+
         ids = [item['id'] for item in value]
         if len(ids) != len(set(ids)):
             raise serializers.ValidationError("Ингредиенты не должны повторяться.")
+
+        # Проверка существования всех ингредиентов
+        existing_ids = set(Ingredient.objects.filter(id__in=ids).values_list('id', flat=True))
+        invalid_ids = set(ids) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f"Некорректные ингредиенты: {', '.join(map(str, invalid_ids))}")
+
         return value
+
+    def validate_image(self, value):
+        if not value:
+            raise serializers.ValidationError("Поле image не может быть пустым.")
+        return value
+
+    def validate_cooking_time(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Время приготовления должно быть не меньше 1 минуты.")
+        return value
+
+    def validate(self, data):
+        request_method = self.context['request'].method
+        if request_method in ['PUT', 'PATCH'] and 'ingredients' not in data:
+            raise serializers.ValidationError({
+                'ingredients': 'Поле ingredients обязательно при обновлении.'
+            })
+        return data
 
     def create_ingredients(self, recipe, ingredients_data):
         bulk = [
@@ -69,12 +95,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients', None)
 
-        # Обновим базовые поля
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Удалим старые и добавим новые ингредиенты
         if ingredients is not None:
             RecipeIngredient.objects.filter(recipe=instance).delete()
             self.create_ingredients(instance, ingredients)
