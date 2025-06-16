@@ -8,8 +8,9 @@ class Recipe(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='recipes/')
-    description = models.TextField()
+    text = models.TextField()
     cooking_time = models.PositiveIntegerField()  # в минутах
+    shopping_cart = models.ManyToManyField(User, related_name='cart_recipes', blank=True)
 
     ingredients = models.ManyToManyField(
         Ingredient,
@@ -19,3 +20,8 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favorites')

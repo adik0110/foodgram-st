@@ -13,7 +13,7 @@ class Ingredient(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey('recipes.Recipe', on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.FloatField()
+    amount = models.IntegerField()
 
     def __str__(self):
         return f"{self.ingredient.name} – {self.amount} {self.ingredient.measurement_unit}"
