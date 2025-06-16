@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from drf_extra_fields.fields import Base64ImageField
 import re
 
 User = get_user_model()
@@ -88,3 +89,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         return obj.following.filter(user=request.user).exists()
+
+
+# users/serializers.py
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('avatar',)

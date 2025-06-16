@@ -1,9 +1,10 @@
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions, generics
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
-from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer
+from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer, AvatarSerializer
 
 User = get_user_model()
 
@@ -40,3 +41,19 @@ class UserMeView(APIView):
     def get(self, request):
         serializer = UserDetailSerializer(request.user, context={'request': request})
         return Response(serializer.data)
+
+
+class UserAvatarUpdateDeleteView(APIView):
+    def put(self, request):
+        serializer = AvatarSerializer(
+            request.user, data=request.data, partial=True, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'avatar': request.build_absolute_uri(request.user.avatar.url)})
+
+    def delete(self, request):
+        user = request.user
+        if user.avatar:
+            user.avatar.delete(save=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
