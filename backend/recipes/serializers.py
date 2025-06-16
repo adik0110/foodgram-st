@@ -66,6 +66,21 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         self.create_ingredients(recipe, ingredients)
         return recipe
 
+    def update(self, instance, validated_data):
+        ingredients = validated_data.pop('ingredients', None)
+
+        # Обновим базовые поля
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Удалим старые и добавим новые ингредиенты
+        if ingredients is not None:
+            RecipeIngredient.objects.filter(recipe=instance).delete()
+            self.create_ingredients(instance, ingredients)
+
+        return instance
+
     def to_representation(self, instance):
         return RecipeReadSerializer(instance, context=self.context).data
 
