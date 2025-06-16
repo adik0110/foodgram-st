@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from .filters import RecipeFilter
@@ -102,3 +103,33 @@ class RecipeViewSet(viewsets.ModelViewSet):
         response = HttpResponse(content, content_type='text/plain; charset=utf-8')
         response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
         return response
+
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[permissions.IsAuthenticated])
+    def favorite(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        if request.method == 'POST':
+            if recipe.favorites.filter(user=user).exists():
+                return Response(
+                    {"detail": "Рецепт уже в избранном."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            recipe.favorites.create(user=user)
+            data = {
+                "id": recipe.id,
+                "name": recipe.name,
+                "image": request.build_absolute_uri(recipe.image.url),
+                "cooking_time": recipe.cooking_time,
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            favorite = recipe.favorites.filter(user=user).first()
+            if not favorite:
+                return Response(
+                    {"detail": "Рецепта нет в избранном."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
