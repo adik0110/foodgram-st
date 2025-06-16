@@ -2,7 +2,7 @@ from rest_framework import serializers
 from drf_extra_fields.fields import Base64ImageField
 from .models import Recipe
 from ingredients.models import Ingredient, RecipeIngredient
-from users.serializers import UserDetailSerializer
+from users.serializers import UserSerializer
 
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
@@ -86,7 +86,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
-    author = UserDetailSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()

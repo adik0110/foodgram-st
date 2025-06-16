@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, generics
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
-from .serializers import UserCreateSerializer, UserListSerializer, UserDetailSerializer, AvatarSerializer, \
+from .serializers import UserCreateSerializer, UserSerializer, AvatarSerializer, \
     SetPasswordSerializer
 
 User = get_user_model()
@@ -17,7 +17,7 @@ class UserListCreateView(APIView):
         paginator = PageNumberPagination()
         paginator.page_size_query_param = 'limit'  # можно передавать limit в query params
         page = paginator.paginate_queryset(users, request)
-        serializer = UserListSerializer(page, many=True, context={'request': request})
+        serializer = UserSerializer(page, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
@@ -25,14 +25,14 @@ class UserListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(
-            UserListSerializer(user, context={'request': request}).data,
+            UserCreateSerializer(user, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
 
 
 class UserRetrieveView(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    serializer_class = UserDetailSerializer
+    serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'id'
 
@@ -40,7 +40,7 @@ class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        serializer = UserDetailSerializer(request.user, context={'request': request})
+        serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
 
