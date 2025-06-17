@@ -1,6 +1,6 @@
-# users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 
 class User(AbstractUser):
     email = models.EmailField(
@@ -40,8 +40,16 @@ class User(AbstractUser):
 
 
 class Follow(models.Model):
-    user = models.ForeignKey(User, related_name='follower', on_delete=models.CASCADE)    # кто подписывается
-    following = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)  # на кого подписываются
+    user = models.ForeignKey(
+        User,
+        related_name='follower',
+        on_delete=models.CASCADE
+    )
+    following = models.ForeignKey(
+        User,
+        related_name='following',
+        on_delete=models.CASCADE
+    )
 
     class Meta:
         unique_together = ('user', 'following')

@@ -1,10 +1,12 @@
-# recipes/filters.py
 import django_filters
 from .models import Recipe
 
+
 class RecipeFilter(django_filters.FilterSet):
     is_favorited = django_filters.BooleanFilter(method='filter_is_favorited')
-    is_in_shopping_cart = django_filters.BooleanFilter(method='filter_is_in_shopping_cart')
+    is_in_shopping_cart = django_filters.BooleanFilter(
+        method='filter_is_in_shopping_cart'
+    )
     author = django_filters.NumberFilter(field_name='author__id')
 
     class Meta:

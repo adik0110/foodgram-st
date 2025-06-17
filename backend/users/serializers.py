@@ -35,7 +35,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         if not re.match(r'^[\w.@+-]+$', value):
             raise serializers.ValidationError(
-                "Имя пользователя может содержать только буквы, цифры и символы @ . + - _"
+                "Может содержать только буквы, цифры и символы @ . + - _"
             )
         return value
 
@@ -117,7 +117,11 @@ class SubscriptionUserSerializer(serializers.ModelSerializer):
                 recipes_qs = recipes_qs[:limit]
             except ValueError:
                 pass
-        serializer = RecipeShortSerializer(recipes_qs, many=True, context=self.context)
+        serializer = RecipeShortSerializer(
+            recipes_qs,
+            many=True,
+            context=self.context
+        )
         return serializer.data
 
     def get_recipes_count(self, obj):

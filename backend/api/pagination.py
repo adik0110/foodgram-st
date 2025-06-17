@@ -3,7 +3,7 @@ from rest_framework.response import Response
 
 
 class LimitPageNumberPagination(PageNumberPagination):
-    page_size = 6  # значение по умолчанию
+    page_size = 6
     page_size_query_param = 'limit'
 
     def get_paginated_response(self, data):

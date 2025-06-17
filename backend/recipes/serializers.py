@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from drf_extra_fields.fields import Base64ImageField
-from .models import Recipe
 from ingredients.models import Ingredient, RecipeIngredient
 from users.serializers import UserSerializer
+from .models import Recipe
 
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
@@ -43,28 +43,39 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def validate_ingredients(self, value):
         if not value:
-            raise serializers.ValidationError("Необходимо указать хотя бы один ингредиент.")
+            raise serializers.ValidationError(
+                "Необходимо указать хотя бы один ингредиент."
+            )
 
         ids = [item['id'] for item in value]
         if len(ids) != len(set(ids)):
-            raise serializers.ValidationError("Ингредиенты не должны повторяться.")
+            raise serializers.ValidationError(
+                "Ингредиенты не должны повторяться."
+            )
 
-        # Проверка существования всех ингредиентов
-        existing_ids = set(Ingredient.objects.filter(id__in=ids).values_list('id', flat=True))
+        existing_ids = set(
+            Ingredient.objects.filter(id__in=ids).values_list('id', flat=True)
+        )
         invalid_ids = set(ids) - existing_ids
         if invalid_ids:
-            raise serializers.ValidationError(f"Некорректные ингредиенты: {', '.join(map(str, invalid_ids))}")
+            raise serializers.ValidationError(
+                f"Некорректные ингредиенты: {', '.join(map(str, invalid_ids))}"
+            )
 
         return value
 
     def validate_image(self, value):
         if not value:
-            raise serializers.ValidationError("Поле image не может быть пустым.")
+            raise serializers.ValidationError(
+                "Поле image не может быть пустым."
+            )
         return value
 
     def validate_cooking_time(self, value):
         if value < 1:
-            raise serializers.ValidationError("Время приготовления должно быть не меньше 1 минуты.")
+            raise serializers.ValidationError(
+                "Время приготовления должно быть не меньше 1 минуты."
+            )
         return value
 
     def validate(self, data):
@@ -88,7 +99,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(author=self.context['request'].user, **validated_data)
+        recipe = Recipe.objects.create(
+            author=self.context['request'].user, **validated_data
+        )
         self.create_ingredients(recipe, ingredients)
         return recipe
 
@@ -123,7 +136,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         )
 
     def get_ingredients(self, obj):
-        # Передаем в контекст текущий рецепт (obj)
         serializer = IngredientReadSerializer(
             obj.ingredients.all(),
             many=True,
@@ -133,11 +145,13 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
-        return user.is_authenticated and obj.favorites.filter(user=user).exists()
+        return (user.is_authenticated
+                and obj.favorites.filter(user=user).exists())
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context.get('request').user
-        return user.is_authenticated and obj.shopping_cart.filter(id=user.id).exists()
+        return (user.is_authenticated
+                and obj.shopping_cart.filter(id=user.id).exists())
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):
