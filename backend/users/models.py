@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -34,6 +35,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
+        ordering = ['email']
 
     def __str__(self):
         return self.email
@@ -50,6 +52,15 @@ class Follow(models.Model):
         related_name='following',
         on_delete=models.CASCADE
     )
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания',
+        default=timezone.now
+    )
 
     class Meta:
-        unique_together = ('user', 'following')
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user} подписан на {self.following}'

@@ -110,7 +110,7 @@ class SubscriptionUserSerializer(serializers.ModelSerializer):
         from recipes.serializers import RecipeShortSerializer
         request = self.context.get('request')
         recipes_limit = request.query_params.get('recipes_limit')
-        recipes_qs = obj.recipe_set.all()
+        recipes_qs = obj.recipes.all()
         if recipes_limit:
             try:
                 limit = int(recipes_limit)
@@ -125,4 +125,4 @@ class SubscriptionUserSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_recipes_count(self, obj):
-        return obj.recipe_set.count()
+        return obj.recipes.count()

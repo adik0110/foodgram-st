@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import User, Follow
 
+
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_display = ('email', 'username', 'first_name', 'last_name')
@@ -14,6 +15,7 @@ class CustomUserAdmin(UserAdmin):
         ('Personal info', {'fields': ('first_name', 'last_name', 'avatar')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
+
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):

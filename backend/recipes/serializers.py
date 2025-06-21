@@ -4,10 +4,19 @@ from ingredients.models import Ingredient, RecipeIngredient
 from users.serializers import UserSerializer
 from .models import Recipe
 
+MIN_COOKING_TIME = 1
+MAX_COOKING_TIME = 32000
+
+MIN_INGREDIENT_AMOUNT = 1
+MAX_INGREDIENT_AMOUNT = 32000
+
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
-    amount = serializers.IntegerField(min_value=1)
+    amount = serializers.IntegerField(
+        min_value=MIN_INGREDIENT_AMOUNT,
+        max_value=MAX_INGREDIENT_AMOUNT
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -22,13 +31,8 @@ class IngredientReadSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
     def get_amount(self, obj):
-        recipe = self.context.get('recipe')
-        if recipe is None:
-            return None
-        recipe_ingredient = RecipeIngredient.objects.filter(
-            recipe=recipe,
-            ingredient=obj
-        ).first()
+        recipe = self.context['recipe']
+        recipe_ingredient = obj.ingredient_recipes.filter(recipe=recipe).first()
         return recipe_ingredient.amount if recipe_ingredient else None
 
 
@@ -36,6 +40,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     ingredients = IngredientInRecipeSerializer(many=True)
     image = Base64ImageField()
     name = serializers.CharField(max_length=256)
+    cooking_time = serializers.IntegerField(
+        min_value=MIN_COOKING_TIME,
+        max_value=MAX_COOKING_TIME
+    )
 
     class Meta:
         model = Recipe
@@ -68,13 +76,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError(
                 "Поле image не может быть пустым."
-            )
-        return value
-
-    def validate_cooking_time(self, value):
-        if value < 1:
-            raise serializers.ValidationError(
-                "Время приготовления должно быть не меньше 1 минуты."
             )
         return value
 
@@ -144,14 +145,12 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_is_favorited(self, obj):
-        user = self.context.get('request').user
-        return (user.is_authenticated
-                and obj.favorites.filter(user=user).exists())
+        user = self.context['request'].user
+        return user.is_authenticated and obj.favorites.filter(user=user).exists()
 
     def get_is_in_shopping_cart(self, obj):
-        user = self.context.get('request').user
-        return (user.is_authenticated
-                and obj.shopping_cart.filter(id=user.id).exists())
+        user = self.context['request'].user
+        return user.is_authenticated and obj.shopping_cart.filter(id=user.id).exists()
 
 
 class RecipeShortSerializer(serializers.ModelSerializer):

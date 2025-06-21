@@ -1,9 +1,11 @@
 from django.contrib import admin
 from .models import Recipe, Favorite
 
+
 class RecipeIngredientInline(admin.TabularInline):
     model = Recipe.ingredients.through
     extra = 1
+
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
@@ -17,6 +19,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorites_count(self, obj):
         return obj.favorites.count()
     favorites_count.short_description = 'В избранном'
+
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):

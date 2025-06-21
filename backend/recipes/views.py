@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from django.db.models import F, Sum
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, permissions
@@ -11,8 +12,9 @@ from api.pagination import LimitPageNumberPagination
 
 from .filters import RecipeFilter
 from .models import Recipe
-from .serializers import RecipeCreateSerializer, RecipeReadSerializer
+from .serializers import RecipeCreateSerializer, RecipeReadSerializer, RecipeShortSerializer
 from .permissions import IsAuthorOrReadOnly
+from ingredients.models import RecipeIngredient
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -60,24 +62,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
         short_code = f"s/{recipe.id}"
-        domain = "https://foodgram.example.org"
-        short_link = f"{domain}/{short_code}"
-
+        short_link = request.build_absolute_uri(f"/{short_code}")
         return Response({"short-link": short_link}, status=status.HTTP_200_OK)
 
-    @action(detail=True,
-            methods=['post'],
-            permission_classes=[permissions.IsAuthenticated],
-            url_path='shopping_cart')
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[permissions.IsAuthenticated],
+        url_path='shopping_cart'
+    )
     def add_to_shopping_cart(self, request, pk=None):
         user = request.user
-        try:
-            recipe = self.get_object()
-        except Recipe.DoesNotExist:
-            return Response(
-                {"detail": "Рецепт не найден."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        recipe = self.get_object()
 
         if recipe.shopping_cart.filter(id=user.id).exists():
             return Response(
@@ -86,13 +82,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
         recipe.shopping_cart.add(user)
-        serializer_data = {
-            "id": recipe.id,
-            "name": recipe.name,
-            "image": request.build_absolute_uri(recipe.image.url),
-            "cooking_time": recipe.cooking_time
-        }
-        return Response(serializer_data, status=status.HTTP_201_CREATED)
+        serializer = RecipeShortSerializer(recipe, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @add_to_shopping_cart.mapping.delete
     def remove_from_shopping_cart(self, request, pk=None):
@@ -114,31 +105,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe.shopping_cart.remove(user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['get'],
-            permission_classes=[permissions.IsAuthenticated],
-            url_path='download_shopping_cart')
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[permissions.IsAuthenticated],
+        url_path='download_shopping_cart'
+    )
     def download_shopping_cart(self, request):
         user = request.user
-        recipes = user.cart_recipes.prefetch_related(
-            'ingredients',
-            'ingredients__recipes'
-        )
 
-        ingredients_count = defaultdict(
-            lambda: {'name': '', 'measurement_unit': '', 'amount': 0}
-        )
-
-        for recipe in recipes:
-            for ri in recipe.recipeingredient_set.all():
-                ingredient = ri.ingredient
-                data = ingredients_count[ingredient.id]
-                data['name'] = ingredient.name
-                data['measurement_unit'] = ingredient.measurement_unit
-                data['amount'] += ri.amount
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__shopping_cart=user
+        ).values(
+            name=F('ingredient__name'),
+            unit=F('ingredient__measurement_unit')
+        ).annotate(
+            total_amount=Sum('amount')
+        ).order_by('name')
 
         lines = ['Список покупок:\n']
-        for ing in ingredients_count.values():
-            line = f"{ing['name']} - {ing['amount']}\n"
+        for item in ingredients:
+            line = f"{item['name']} ({item['unit']}) — {item['total_amount']}\n"
             lines.append(line)
 
         content = ''.join(lines)
@@ -147,15 +134,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content,
             content_type='text/plain; charset=utf-8'
         )
-        response['Content-Disposition'] = (
-            'attachment; '
-            'filename="shopping_list.txt"'
-        )
+        response['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
         return response
 
-    @action(detail=True,
-            methods=['post', 'delete'],
-            permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[permissions.IsAuthenticated]
+    )
     def favorite(self, request, pk=None):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
@@ -167,13 +153,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             recipe.favorites.create(user=user)
-            data = {
-                "id": recipe.id,
-                "name": recipe.name,
-                "image": request.build_absolute_uri(recipe.image.url),
-                "cooking_time": recipe.cooking_time,
-            }
-            return Response(data, status=status.HTTP_201_CREATED)
+            serializer = RecipeShortSerializer(recipe, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             favorite = recipe.favorites.filter(user=user).first()

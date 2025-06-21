@@ -18,13 +18,18 @@ from .serializers import (UserCreateSerializer,
 User = get_user_model()
 
 
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'limit'
+
+
 class UserListCreateView(APIView):
     permission_classes = [permissions.AllowAny]
+    pagination_class = CustomPagination
 
     def get(self, request):
         users = User.objects.all()
-        paginator = PageNumberPagination()
-        paginator.page_size_query_param = 'limit'
+        paginator = self.pagination_class()
         page = paginator.paginate_queryset(users, request)
         serializer = UserSerializer(
             page,
@@ -103,6 +108,7 @@ class SetPasswordView(APIView):
 class UserViewSet(viewsets.GenericViewSet):
     queryset = User.objects.all()
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CustomPagination
 
     @action(detail=True, methods=['post', 'delete'], url_path='subscribe')
     def subscribe(self, request, pk=None):
@@ -116,7 +122,7 @@ class UserViewSet(viewsets.GenericViewSet):
             )
 
         if request.method == 'POST':
-            if Follow.objects.filter(user=user, following=author).exists():
+            if user.follower.filter(following=author).exists():
                 return Response(
                     {'detail': 'Вы уже подписаны на этого пользователя.'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -129,7 +135,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            follow = Follow.objects.filter(user=user, following=author).first()
+            follow = user.follower.filter(following=author).first()
             if not follow:
                 return Response(
                     {'detail': 'Вы не подписаны на этого пользователя.'},
@@ -141,26 +147,14 @@ class UserViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['get'], url_path='subscriptions')
     def subscriptions(self, request):
         user = request.user
-        follows = Follow.objects.filter(user=user).select_related('following')
-        following_users = [f.following for f in follows]
+        # получаем queryset пользователей, на которых подписан юзер:
+        following_qs = User.objects.filter(follower__user=user)
 
-        page_number = request.query_params.get('page', 1)
-        limit = request.query_params.get('limit', 10)
-        paginator = Paginator(following_users, limit)
-        page_obj = paginator.get_page(page_number)
-
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(following_qs, request)
         serializer = SubscriptionUserSerializer(
-            page_obj,
+            page,
             many=True,
             context={'request': request}
         )
-        return Response({
-            'count': paginator.count,
-            'next': None
-            if not page_obj.has_next()
-            else f'?page={page_obj.next_page_number()}&limit={limit}',
-            'previous': None
-            if not page_obj.has_previous()
-            else f'?page={page_obj.previous_page_number()}&limit={limit}',
-            'results': serializer.data,
-        })
+        return paginator.get_paginated_response(serializer.data)
